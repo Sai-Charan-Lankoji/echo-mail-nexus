@@ -8,10 +8,11 @@ import SearchBar from '@/components/SearchBar';
 import EmailFilter from '@/components/EmailFilter';
 import EmailPagination from '@/components/EmailPagination';
 import { useEmailManagement } from '@/hooks/useEmailManagement';
-import { Menu } from 'lucide-react';
+import { Menu, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
 
 const Index = () => {
   const {
@@ -34,10 +35,50 @@ const Index = () => {
     handleReply,
     handlePageChange,
     handleFolderChange,
+    isLoading,
+    hasAccess,
+    handleRequestAccess,
   } = useEmailManagement();
 
   const isMobile = useIsMobile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Show loading state while checking Gmail access
+  if (isLoading && !hasAccess) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <Spinner className="h-8 w-8" />
+          <p className="text-sm text-muted-foreground">Connecting to Gmail...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authentication screen if no access
+  if (!hasAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen p-4">
+        <div className="w-full max-w-md p-6 rounded-xl bg-card border shadow-sm">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="p-3 rounded-full bg-primary/10">
+              <Mail className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold">Connect to Gmail</h1>
+            <p className="text-muted-foreground">
+              EchoMail needs access to your Gmail account to display your emails.
+            </p>
+            <Button 
+              className="mt-4 w-full" 
+              onClick={handleRequestAccess}
+            >
+              Connect Gmail Account
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -70,7 +111,11 @@ const Index = () => {
         {/* Main content area - now on the left */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-auto flex flex-col">
-            {filteredEmails.length === 0 && searchQuery ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Spinner className="h-6 w-6" />
+              </div>
+            ) : filteredEmails.length === 0 && searchQuery ? (
               <div className="flex flex-col items-center justify-center h-64 p-8 text-center">
                 <p className="text-muted-foreground">
                   No emails found matching "{searchQuery}"

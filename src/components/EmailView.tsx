@@ -1,10 +1,13 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Star, Trash2, Reply, Forward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Email } from '../data/emails';
+import { Email } from '@/data/emails';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
+import { gmailService } from '@/services/gmail.service';
+import { useToast } from '@/hooks/use-toast';
+import { Spinner } from '@/components/ui/spinner';
 
 interface EmailViewProps {
   email: Email | null;
@@ -13,9 +16,60 @@ interface EmailViewProps {
 }
 
 const EmailView: React.FC<EmailViewProps> = ({ email, onBack, onReply }) => {
+  const { toast } = useToast();
+  const [isStarred, setIsStarred] = useState(email?.starred || false);
+  const [isLoading, setIsLoading] = useState(false);
+  
   if (!email) return null;
 
   const formattedDate = format(new Date(email.timestamp), 'MMM d, yyyy h:mm a');
+  
+  const handleStar = async () => {
+    if (!email) return;
+    
+    setIsLoading(true);
+    try {
+      if (isStarred) {
+        await gmailService.removeLabel(email.id, 'STARRED');
+        setIsStarred(false);
+      } else {
+        await gmailService.addLabel(email.id, 'STARRED');
+        setIsStarred(true);
+      }
+    } catch (error) {
+      console.error('Error updating star status:', error);
+      toast({
+        title: "Action Failed",
+        description: "Could not update star status.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleTrash = async () => {
+    if (!email) return;
+    
+    setIsLoading(true);
+    try {
+      await gmailService.trashEmail(email.id);
+      toast({
+        title: "Email Moved to Trash",
+        description: "The email has been moved to your trash folder.",
+      });
+      onBack();
+    } catch (error) {
+      console.error('Error moving email to trash:', error);
+      toast({
+        title: "Action Failed",
+        description: "Could not move the email to trash.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -27,12 +81,20 @@ const EmailView: React.FC<EmailViewProps> = ({ email, onBack, onReply }) => {
           <h2 className="text-lg font-medium">{email.subject}</h2>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon">
-            <Star className="h-4 w-4" fill={email.starred ? "currentColor" : "none"} />
-          </Button>
-          <Button variant="ghost" size="icon">
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {isLoading ? (
+            <Button variant="ghost" size="icon" disabled>
+              <Spinner className="h-4 w-4" />
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="icon" onClick={handleStar}>
+                <Star className="h-4 w-4" fill={isStarred ? "currentColor" : "none"} />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleTrash}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
