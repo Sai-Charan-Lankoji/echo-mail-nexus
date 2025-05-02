@@ -109,4 +109,9 @@
   .composer-textarea {
     @apply resize-none min-h-[200px] focus:outline-none;
   }
+  
+  /* Email label styles */
+  .email-label {
+    @apply inline-flex items-center px-2 py-0.5 text-xs rounded-full mr-1;
+  }
 }

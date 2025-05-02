@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Paperclip, Send, Bold, Italic, List, Link } from 'lucide-react';
+import { X, Paperclip, Send, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Email } from '../data/emails';
@@ -17,6 +17,10 @@ interface ComposerProps {
 const Composer: React.FC<ComposerProps> = ({ isOpen, onClose, replyToEmail }) => {
   const { toast } = useToast();
   const [to, setTo] = useState(replyToEmail ? replyToEmail.from.email : '');
+  const [showCc, setShowCc] = useState(false);
+  const [showBcc, setShowBcc] = useState(false);
+  const [cc, setCc] = useState('');
+  const [bcc, setBcc] = useState('');
   const [subject, setSubject] = useState(replyToEmail ? `Re: ${replyToEmail.subject}` : '');
   const [body, setBody] = useState(replyToEmail ? 
     `<br/><br/><div style="border-left: 2px solid #ccc; padding-left: 10px; color: #666;">
@@ -97,27 +101,80 @@ const Composer: React.FC<ComposerProps> = ({ isOpen, onClose, replyToEmail }) =>
         <div className="p-4 flex-1 overflow-auto">
           <div className="space-y-4">
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="to" className="text-sm font-medium">
-                To:
-              </label>
-              <Input
-                id="to"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                placeholder="email@example.com"
-              />
+              <div className="flex items-center">
+                <label htmlFor="to" className="text-sm font-medium w-16">
+                  To:
+                </label>
+                <Input
+                  id="to"
+                  value={to}
+                  onChange={(e) => setTo(e.target.value)}
+                  placeholder="email@example.com"
+                  className="flex-1"
+                />
+                {(!showCc || !showBcc) && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="ml-2"
+                    onClick={() => {
+                      if (!showCc) setShowCc(true);
+                      else if (!showBcc) setShowBcc(true);
+                    }}
+                  >
+                    {!showCc ? 'Cc' : 'Bcc'}
+                  </Button>
+                )}
+              </div>
             </div>
             
+            {showCc && (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center">
+                  <label htmlFor="cc" className="text-sm font-medium w-16">
+                    Cc:
+                  </label>
+                  <Input
+                    id="cc"
+                    value={cc}
+                    onChange={(e) => setCc(e.target.value)}
+                    placeholder="cc@example.com"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            )}
+            
+            {showBcc && (
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center">
+                  <label htmlFor="bcc" className="text-sm font-medium w-16">
+                    Bcc:
+                  </label>
+                  <Input
+                    id="bcc"
+                    value={bcc}
+                    onChange={(e) => setBcc(e.target.value)}
+                    placeholder="bcc@example.com"
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            )}
+            
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="subject" className="text-sm font-medium">
-                Subject:
-              </label>
-              <Input
-                id="subject"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Subject"
-              />
+              <div className="flex items-center">
+                <label htmlFor="subject" className="text-sm font-medium w-16">
+                  Subject:
+                </label>
+                <Input
+                  id="subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Subject"
+                  className="flex-1"
+                />
+              </div>
             </div>
             
             <div className="flex flex-col gap-1.5 min-h-[300px]">
