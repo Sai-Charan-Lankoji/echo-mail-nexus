@@ -62,14 +62,23 @@ const Index = () => {
     }
     
     if (filterOptions.hasAttachments) {
-      emails = emails.filter(email => email.hasAttachments);
+      // Fix: Check if email.attachments exists and has length > 0
+      emails = emails.filter(email => email.attachments && email.attachments.length > 0);
     }
     
-    // Apply sorting
+    // Apply sorting - Fix: Convert timestamp strings to Date objects for comparison
     if (filterOptions.sortBy === 'newest') {
-      emails = emails.sort((a, b) => b.timestamp - a.timestamp);
+      emails = emails.sort((a, b) => {
+        const dateA = new Date(a.timestamp).getTime();
+        const dateB = new Date(b.timestamp).getTime();
+        return dateB - dateA;
+      });
     } else {
-      emails = emails.sort((a, b) => a.timestamp - b.timestamp);
+      emails = emails.sort((a, b) => {
+        const dateA = new Date(a.timestamp).getTime();
+        const dateB = new Date(b.timestamp).getTime();
+        return dateA - dateB;
+      });
     }
     
     // Apply search
