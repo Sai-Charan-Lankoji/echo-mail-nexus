@@ -5,7 +5,6 @@ import {
   Send, 
   FileText, 
   Trash2, 
-  Edit, 
   Plus 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -36,12 +35,12 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <div className={cn(
-      "border-r min-h-screen bg-sidebar flex flex-col",
-      isMobile ? "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 ease-in-out" : "w-64"
+      "border-l min-h-screen bg-sidebar flex flex-col",
+      isMobile ? "fixed inset-y-0 right-0 z-50 w-64 transform transition-transform duration-200 ease-in-out" : "w-64"
     )}>
       <div className="p-4">
         <Button 
-          className="w-full flex items-center gap-2" 
+          className="w-full flex items-center gap-2 bg-primary hover:bg-primary/90" 
           onClick={onCompose}
         >
           <Plus className="h-4 w-4" />

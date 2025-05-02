@@ -1,11 +1,12 @@
 
 import React, { useState } from 'react';
-import { X, Paperclip, Send } from 'lucide-react';
+import { X, Paperclip, Send, Bold, Italic, List, Link } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Email } from '../data/emails';
 import { useToast } from '@/components/ui/use-toast';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface ComposerProps {
   isOpen: boolean;
@@ -17,9 +18,36 @@ const Composer: React.FC<ComposerProps> = ({ isOpen, onClose, replyToEmail }) =>
   const { toast } = useToast();
   const [to, setTo] = useState(replyToEmail ? replyToEmail.from.email : '');
   const [subject, setSubject] = useState(replyToEmail ? `Re: ${replyToEmail.subject}` : '');
-  const [body, setBody] = useState(replyToEmail ? `\n\n------ Original Message ------\nFrom: ${replyToEmail.from.name}\nDate: ${new Date(replyToEmail.timestamp).toLocaleString()}\nSubject: ${replyToEmail.subject}\n\n${replyToEmail.body.replace(/<[^>]*>/g, '')}` : '');
+  const [body, setBody] = useState(replyToEmail ? 
+    `<br/><br/><div style="border-left: 2px solid #ccc; padding-left: 10px; color: #666;">
+      <p><strong>From:</strong> ${replyToEmail.from.name}</p>
+      <p><strong>Date:</strong> ${new Date(replyToEmail.timestamp).toLocaleString()}</p>
+      <p><strong>Subject:</strong> ${replyToEmail.subject}</p>
+      <br/>
+      ${replyToEmail.body}
+    </div>` 
+    : '');
 
   if (!isOpen) return null;
+
+  const modules = {
+    toolbar: [
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ list: 'ordered' }, { list: 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link', 'image'],
+      [{ 'align': [] }],
+      ['clean']
+    ],
+  };
+  
+  const formats = [
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'link', 'image',
+    'color', 'background',
+    'align'
+  ];
 
   const handleSend = () => {
     if (!to) {
@@ -92,13 +120,18 @@ const Composer: React.FC<ComposerProps> = ({ isOpen, onClose, replyToEmail }) =>
               />
             </div>
             
-            <div className="flex flex-col gap-1.5">
-              <Textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="composer-textarea"
-                placeholder="Write your message here..."
-              />
+            <div className="flex flex-col gap-1.5 min-h-[300px]">
+              <div className="flex-grow">
+                <ReactQuill 
+                  theme="snow"
+                  value={body}
+                  onChange={setBody}
+                  modules={modules}
+                  formats={formats}
+                  placeholder="Write your message here..."
+                  className="h-[250px] mb-12"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -114,7 +147,7 @@ const Composer: React.FC<ComposerProps> = ({ isOpen, onClose, replyToEmail }) =>
             </Button>
           </div>
           
-          <Button onClick={handleSend}>
+          <Button onClick={handleSend} className="bg-primary hover:bg-primary/90">
             <Send className="h-4 w-4 mr-1" />
             Send
           </Button>

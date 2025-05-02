@@ -9,6 +9,8 @@ import { sampleEmails, Email, Folder } from '@/data/emails';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 const Index = () => {
   const [activeFolder, setActiveFolder] = useState<Folder>('inbox');
@@ -75,7 +77,7 @@ const Index = () => {
           </Button>
         )}
         <div className="flex-1 px-2">
-          <h1 className="text-xl font-bold">EchoMail</h1>
+          <h1 className="text-xl font-bold text-primary">EchoMail</h1>
         </div>
         <div>
           <SearchBar value={searchQuery} onChange={setSearchQuery} />
@@ -83,23 +85,8 @@ const Index = () => {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - conditionally shown based on mobile state */}
-        {(isMobile ? isSidebarOpen : true) && (
-          <Sidebar
-            activeFolder={activeFolder}
-            onFolderChange={(folder) => {
-              setActiveFolder(folder as Folder);
-              if (isMobile) {
-                setIsSidebarOpen(false);
-              }
-            }}
-            onCompose={handleCompose}
-            folderCounts={folderCounts}
-          />
-        )}
-
-        {/* Main content area */}
-        <div className={`flex-1 overflow-hidden ${selectedEmail ? 'hidden md:block' : ''}`}>
+        {/* Main content area - now on the left */}
+        <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-auto">
             {filteredEmails.length === 0 && searchQuery ? (
               <div className="flex flex-col items-center justify-center h-64 p-8 text-center">
@@ -118,19 +105,36 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Email view - conditionally shown */}
-        {selectedEmail && (
-          <div className="flex-1 border-l h-full overflow-hidden">
+        {/* Sidebar - now on the right, conditionally shown based on mobile state */}
+        {(isMobile ? isSidebarOpen : true) && (
+          <Sidebar
+            activeFolder={activeFolder}
+            onFolderChange={(folder) => {
+              setActiveFolder(folder as Folder);
+              if (isMobile) {
+                setIsSidebarOpen(false);
+              }
+            }}
+            onCompose={handleCompose}
+            folderCounts={folderCounts}
+          />
+        )}
+      </div>
+
+      {/* Email view dialog */}
+      <Dialog open={!!selectedEmail} onOpenChange={(open) => !open && setSelectedEmail(null)}>
+        <DialogContent className="max-w-3xl w-full p-0 h-[80vh] max-h-[80vh] overflow-hidden">
+          {selectedEmail && (
             <EmailView
               email={selectedEmail}
               onBack={() => setSelectedEmail(null)}
               onReply={handleReply}
             />
-          </div>
-        )}
-      </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
-      {/* Email composer modal */}
+      {/* Email composer with rich text editor */}
       {isComposerOpen && (
         <Composer 
           isOpen={isComposerOpen} 
