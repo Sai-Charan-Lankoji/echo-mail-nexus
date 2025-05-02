@@ -9,7 +9,7 @@ import { sampleEmails, Email, Folder } from '@/data/emails';
 import { Menu, ChevronLeft, ChevronRight, ListFilter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import {
   Pagination,
@@ -54,6 +54,13 @@ const Index = () => {
 
   // Filter emails based on search query and filter options
   const getFilteredEmails = () => {
+    // Fix: Check if activeFolder exists in sampleEmails before proceeding
+    if (!sampleEmails[activeFolder]) {
+      // If the folder doesn't exist, return an empty array
+      console.error(`Folder "${activeFolder}" not found in sampleEmails`);
+      return [];
+    }
+    
     let emails = [...sampleEmails[activeFolder]];
     
     // Apply filters
@@ -189,6 +196,22 @@ const Index = () => {
     );
   };
 
+  const handleFolderChange = (folder: string) => {
+    // Check if the folder starts with "label:" to handle label filtering
+    if (folder.startsWith('label:')) {
+      // Handle label-based filtering here if needed
+      // For now, we'll just use inbox as a fallback
+      setActiveFolder('inbox');
+    } else if (sampleEmails[folder as Folder]) {
+      // Only set the active folder if it exists in sampleEmails
+      setActiveFolder(folder as Folder);
+    } else {
+      // Default to inbox if the folder doesn't exist
+      console.warn(`Folder "${folder}" not found, defaulting to inbox`);
+      setActiveFolder('inbox');
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <div className="flex items-center border-b p-2">
@@ -282,12 +305,7 @@ const Index = () => {
         {(isMobile ? isSidebarOpen : true) && (
           <Sidebar
             activeFolder={activeFolder}
-            onFolderChange={(folder) => {
-              setActiveFolder(folder as Folder);
-              if (isMobile) {
-                setIsSidebarOpen(false);
-              }
-            }}
+            onFolderChange={handleFolderChange}
             onCompose={handleCompose}
             folderCounts={folderCounts}
           />
@@ -298,11 +316,14 @@ const Index = () => {
       <Dialog open={!!selectedEmail} onOpenChange={(open) => !open && setSelectedEmail(null)}>
         <DialogContent className="max-w-3xl w-full p-0 h-[80vh] max-h-[80vh] overflow-hidden">
           {selectedEmail && (
-            <EmailView
-              email={selectedEmail}
-              onBack={() => setSelectedEmail(null)}
-              onReply={handleReply}
-            />
+            <>
+              <DialogTitle className="sr-only">Email View</DialogTitle>
+              <EmailView
+                email={selectedEmail}
+                onBack={() => setSelectedEmail(null)}
+                onReply={handleReply}
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>
