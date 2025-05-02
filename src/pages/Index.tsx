@@ -107,14 +107,14 @@ const Index = () => {
       </div>
 
       {/* Email view dialog */}
-      <Dialog open={!!selectedEmail} onOpenChange={(open) => !open && setSelectedEmail(null)}>
+      <Dialog open={!!selectedEmail} onOpenChange={(open) => !open && handleSelectEmail(null)}>
         <DialogContent className="max-w-3xl w-full p-0 h-[80vh] max-h-[80vh] overflow-hidden">
           {selectedEmail && (
             <>
               <DialogTitle className="sr-only">Email View</DialogTitle>
               <EmailView
                 email={selectedEmail}
-                onBack={() => setSelectedEmail(null)}
+                onBack={() => handleSelectEmail(null)}
                 onReply={handleReply}
               />
             </>
