@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Inbox, 
   Send, 
@@ -16,10 +16,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { gmailService, Label } from '@/services/gmail.service';
-import { useToast } from '@/hooks/use-toast';
-import { Spinner } from '@/components/ui/spinner';
+} from "@/components/ui/collapsible"
 
 interface SidebarProps {
   activeFolder: string;
@@ -35,45 +32,21 @@ const Sidebar: React.FC<SidebarProps> = ({
   folderCounts 
 }) => {
   const isMobile = useIsMobile();
-  const { toast } = useToast();
   const [isLabelsOpen, setIsLabelsOpen] = useState(true);
-  const [labels, setLabels] = useState<Label[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Fetch Gmail labels
-  useEffect(() => {
-    const fetchLabels = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedLabels = await gmailService.getLabels();
-        // Filter out system labels that we already show separately
-        const userLabels = fetchedLabels.filter(label => 
-          !['INBOX', 'SENT', 'DRAFT', 'TRASH', 'SPAM', 'CATEGORY_PERSONAL', 
-            'CATEGORY_SOCIAL', 'CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 
-            'CATEGORY_FORUMS', 'IMPORTANT', 'CHAT', 'STARRED', 'UNREAD']
-            .includes(label.id)
-        );
-        setLabels(userLabels);
-      } catch (error) {
-        console.error('Error fetching labels:', error);
-        toast({
-          title: "Failed to Load Labels",
-          description: "Could not retrieve your Gmail labels.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchLabels();
-  }, [toast]);
   
   const folders = [
     { id: 'inbox', name: 'Inbox', icon: Inbox },
     { id: 'sent', name: 'Sent', icon: Send },
     { id: 'drafts', name: 'Drafts', icon: FileText },
     { id: 'trash', name: 'Trash', icon: Trash2 }
+  ];
+
+  // Sample labels - in a real app, these would come from the backend
+  const labels = [
+    { id: 'work', name: 'Work', color: '#ef4444' },
+    { id: 'personal', name: 'Personal', color: '#3b82f6' },
+    { id: 'finance', name: 'Finance', color: '#10b981' },
+    { id: 'social', name: 'Social', color: '#8b5cf6' }
   ];
 
   return (
@@ -104,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <folder.icon className="h-4 w-4" />
                 <span>{folder.name}</span>
-                {folderCounts[folder.id] > 0 && folder.id === 'inbox' && (
+                {folderCounts[folder.id] > 0 && (
                   <span className="ml-auto bg-muted rounded-full px-2 py-1 text-xs">
                     {folderCounts[folder.id]}
                   </span>
@@ -134,35 +107,25 @@ const Sidebar: React.FC<SidebarProps> = ({
               />
             </CollapsibleTrigger>
             <CollapsibleContent>
-              {isLoading ? (
-                <div className="flex justify-center my-2">
-                  <Spinner className="h-4 w-4" />
-                </div>
-              ) : labels.length === 0 ? (
-                <div className="px-5 py-3 text-xs text-muted-foreground">
-                  No custom labels found
-                </div>
-              ) : (
-                <ul className="space-y-1 px-2 mt-1">
-                  {labels.map(label => (
-                    <li key={label.id}>
-                      <button
-                        onClick={() => onFolderChange(`label:${label.id}`)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-muted",
-                          activeFolder === `label:${label.id}` && "folder-active"
-                        )}
-                      >
-                        <span 
-                          className="h-3 w-3 rounded-full" 
-                          style={{ backgroundColor: `hsl(${label.id.charCodeAt(0) % 360}, 70%, 50%)` }}
-                        />
-                        <span>{label.name}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <ul className="space-y-1 px-2 mt-1">
+                {labels.map(label => (
+                  <li key={label.id}>
+                    <button
+                      onClick={() => onFolderChange(`label:${label.id}`)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-muted",
+                        activeFolder === `label:${label.id}` && "folder-active"
+                      )}
+                    >
+                      <span 
+                        className="h-3 w-3 rounded-full" 
+                        style={{ backgroundColor: label.color }}
+                      />
+                      <span>{label.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </CollapsibleContent>
           </Collapsible>
         </div>

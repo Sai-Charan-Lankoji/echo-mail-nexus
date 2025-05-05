@@ -1,9 +1,6 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { Email, Folder } from '@/data/emails';
-import { gmailService, EmailMessage, Label } from '@/services/gmail.service';
-import { gmailToEchomail, folderToLabel } from '@/utils/emailAdapter';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
+import { Email, Folder, sampleEmails } from '@/data/emails';
 
 export interface FilterOptions {
   unreadOnly: boolean;
@@ -12,7 +9,6 @@ export interface FilterOptions {
 }
 
 export const useEmailManagement = (initialFolder: Folder = 'inbox') => {
-  const { toast } = useToast();
   const [activeFolder, setActiveFolder] = useState<Folder>(initialFolder);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,189 +21,83 @@ export const useEmailManagement = (initialFolder: Folder = 'inbox') => {
     hasAttachments: false,
     sortBy: 'newest',
   });
-  
-  // Email data states
-  const [emails, setEmails] = useState<Email[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasAccess, setHasAccess] = useState(false);
-  const [labels, setLabels] = useState<Label[]>([]);
-  const [folderCounts, setFolderCounts] = useState<Record<string, number>>({
-    inbox: 0,
-    sent: 0,
-    drafts: 0,
-    trash: 0,
-  });
-
-  // Check Gmail access on mount
-  useEffect(() => {
-    const checkGmailAccess = async () => {
-      try {
-        const accessResponse = await gmailService.checkAccess();
-        setHasAccess(accessResponse.hasAccess);
-        
-        if (accessResponse.hasAccess) {
-          // If we have access, load initial data
-          await fetchLabels();
-          await fetchEmails();
-          await fetchFolderCounts();
-        }
-      } catch (error) {
-        console.error("Error checking Gmail access:", error);
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to Gmail. Please try again.",
-          variant: "destructive",
-        });
-      }
-    };
-    
-    checkGmailAccess();
-  }, []);
 
   // Reset selected email and page when folder changes
   useEffect(() => {
     setSelectedEmail(null);
     setCurrentPage(1);
-    fetchEmails();
   }, [activeFolder]);
 
-  // Fetch emails for the current folder with search and filters
-  const fetchEmails = useCallback(async () => {
-    if (!hasAccess) return;
+  // Filter emails based on search query and filter options
+  const getFilteredEmails = () => {
+    // Check if activeFolder exists in sampleEmails before proceeding
+    if (!sampleEmails[activeFolder]) {
+      // If the folder doesn't exist, return an empty array
+      console.error(`Folder "${activeFolder}" not found in sampleEmails`);
+      return [];
+    }
     
-    setIsLoading(true);
-    try {
-      // Convert folder to label and prepare query
-      const labelId = folderToLabel(activeFolder);
-      const query: any = {
-        maxResults: emailsPerPage,
-        pageToken: (currentPage > 1) ? `page${currentPage}` : undefined, // You'll need to implement actual pagination with your API
-      };
-      
-      // Add label query if not searching
-      if (!searchQuery) {
-        if (labelId.startsWith('label:')) {
-          query.labelIds = labelId.replace('label:', '');
-        } else {
-          query.labelIds = labelId;
-        }
-      }
-      
-      // Add search query if present
-      if (searchQuery) {
-        query.q = searchQuery;
-      }
-      
-      // Add filter options
-      if (filterOptions.unreadOnly) {
-        query.q = (query.q ? query.q + ' ' : '') + 'is:unread';
-      }
-      
-      if (filterOptions.hasAttachments) {
-        query.q = (query.q ? query.q + ' ' : '') + 'has:attachment';
-      }
-      
-      // Get emails from Gmail API
-      const response = await gmailService.getEmails(query);
-      
-      // Convert Gmail emails to EchoMail format
-      const convertedEmails = response.messages.map(gmailToEchomail);
-      
-      // Sort emails
-      if (filterOptions.sortBy === 'newest') {
-        convertedEmails.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      } else {
-        convertedEmails.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      }
-      
-      setEmails(convertedEmails);
-    } catch (error) {
-      console.error("Error fetching emails:", error);
-      toast({
-        title: "Failed to Load Emails",
-        description: "Could not retrieve your emails. Please try again.",
-        variant: "destructive",
+    let emails = [...sampleEmails[activeFolder]];
+    
+    // Apply filters
+    if (filterOptions.unreadOnly) {
+      emails = emails.filter(email => !email.read);
+    }
+    
+    if (filterOptions.hasAttachments) {
+      // Check if email.attachments exists and has length > 0
+      emails = emails.filter(email => email.attachments && email.attachments.length > 0);
+    }
+    
+    // Apply sorting - Convert timestamp strings to Date objects for comparison
+    if (filterOptions.sortBy === 'newest') {
+      emails = emails.sort((a, b) => {
+        const dateA = new Date(a.timestamp).getTime();
+        const dateB = new Date(b.timestamp).getTime();
+        return dateB - dateA;
       });
-      setEmails([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeFolder, currentPage, searchQuery, filterOptions, hasAccess, emailsPerPage]);
-
-  // Fetch folder counts (unread counts)
-  const fetchFolderCounts = useCallback(async () => {
-    if (!hasAccess) return;
-    
-    try {
-      // Get counts for main folders
-      const inboxCount = await gmailService.getEmailCount({ labelIds: 'INBOX', q: 'is:unread' });
-      const draftsCount = await gmailService.getEmailCount({ labelIds: 'DRAFT' });
-      const sentCount = await gmailService.getEmailCount({ labelIds: 'SENT' });
-      const trashCount = await gmailService.getEmailCount({ labelIds: 'TRASH' });
-      
-      setFolderCounts({
-        inbox: inboxCount.count,
-        drafts: draftsCount.count,
-        sent: sentCount.count,
-        trash: trashCount.count
-      });
-    } catch (error) {
-      console.error("Error fetching folder counts:", error);
-    }
-  }, [hasAccess]);
-
-  // Fetch available labels
-  const fetchLabels = useCallback(async () => {
-    if (!hasAccess) return;
-    
-    try {
-      const labelList = await gmailService.getLabels();
-      setLabels(labelList);
-    } catch (error) {
-      console.error("Error fetching labels:", error);
-    }
-  }, [hasAccess]);
-
-  // Request Gmail access if not already granted
-  const handleRequestAccess = async () => {
-    try {
-      await gmailService.requestAccess();
-    } catch (error) {
-      console.error("Error requesting Gmail access:", error);
-      toast({
-        title: "Authentication Failed",
-        description: "Could not authenticate with Gmail. Please try again.",
-        variant: "destructive",
+    } else {
+      emails = emails.sort((a, b) => {
+        const dateA = new Date(a.timestamp).getTime();
+        const dateB = new Date(b.timestamp).getTime();
+        return dateA - dateB;
       });
     }
+    
+    // Apply search
+    if (searchQuery) {
+      const lowerCaseQuery = searchQuery.toLowerCase();
+      emails = emails.filter(email => (
+        email.subject.toLowerCase().includes(lowerCaseQuery) ||
+        email.from.name.toLowerCase().includes(lowerCaseQuery) ||
+        email.body.toLowerCase().includes(lowerCaseQuery)
+      ));
+    }
+    
+    return emails;
   };
 
-  // Filtered emails based on all criteria
-  const filteredEmails = emails;
+  const filteredEmails = getFilteredEmails();
   
   // Calculate pagination
   const indexOfLastEmail = currentPage * emailsPerPage;
   const indexOfFirstEmail = indexOfLastEmail - emailsPerPage;
-  const currentEmails = filteredEmails.slice(0, emailsPerPage); // Already paginated from API
+  const currentEmails = filteredEmails.slice(indexOfFirstEmail, indexOfLastEmail);
   const totalPages = Math.ceil(filteredEmails.length / emailsPerPage);
 
-  // Email actions
-  const handleSelectEmail = async (email: Email | null) => {
+  // Count unread emails in each folder
+  const folderCounts = {
+    inbox: sampleEmails.inbox.filter(email => !email.read).length,
+    sent: sampleEmails.sent.length,
+    drafts: sampleEmails.drafts.length,
+    trash: sampleEmails.trash.length,
+  };
+
+  const handleSelectEmail = (email: Email) => {
     setSelectedEmail(email);
-    
-    // Mark as read when selected (if it's not already read)
-    if (email && !email.read) {
-      try {
-        await gmailService.markAsRead(email.id);
-        // Update email in state to mark it as read
-        setEmails(prev => 
-          prev.map(e => e.id === email.id ? { ...e, read: true } : e)
-        );
-        // Refresh folder counts
-        await fetchFolderCounts();
-      } catch (error) {
-        console.error("Error marking email as read:", error);
-      }
+    // Mark as read when selected (in a real app, this would update the server)
+    if (!email.read) {
+      email.read = true;
     }
   };
 
@@ -228,8 +118,19 @@ export const useEmailManagement = (initialFolder: Folder = 'inbox') => {
   };
 
   const handleFolderChange = (folder: string) => {
-    const newFolder = folder as Folder;
-    setActiveFolder(newFolder);
+    // Check if the folder starts with "label:" to handle label filtering
+    if (folder.startsWith('label:')) {
+      // Handle label-based filtering here if needed
+      // For now, we'll just use inbox as a fallback
+      setActiveFolder('inbox');
+    } else if (sampleEmails[folder as Folder]) {
+      // Only set the active folder if it exists in sampleEmails
+      setActiveFolder(folder as Folder);
+    } else {
+      // Default to inbox if the folder doesn't exist
+      console.warn(`Folder "${folder}" not found, defaulting to inbox`);
+      setActiveFolder('inbox');
+    }
   };
 
   return {
@@ -253,9 +154,5 @@ export const useEmailManagement = (initialFolder: Folder = 'inbox') => {
     handleReply,
     handlePageChange,
     handleFolderChange,
-    isLoading,
-    hasAccess,
-    handleRequestAccess,
-    labels,
   };
 };
